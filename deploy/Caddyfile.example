@@ -1,0 +1,10 @@
+# /etc/caddy/Caddyfile
+# Caddy gets the HTTPS certificate. Only the webhook path is exposed.
+bot.example.com {
+	handle /zoom/webhook {
+		reverse_proxy 127.0.0.1:3000
+	}
+	handle {
+		respond 404
+	}
+}

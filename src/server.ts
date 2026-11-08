@@ -57,6 +57,7 @@ export function buildServer(opts: WebhookServerOptions): FastifyInstance {
     }
 
     if (typeof body.event !== "string") return reply.code(400).send({ error: "missing event" });
+    req.log.info({ event: body.event }, "webhook received");
     await opts.onEvent(body as { event: string });
     return reply.code(200).send({ ok: true });
   });

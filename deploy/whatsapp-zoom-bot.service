@@ -1,0 +1,37 @@
+# /etc/systemd/system/whatsapp-zoom-bot.service
+[Unit]
+Description=WhatsApp Zoom bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=zoombot
+Group=zoombot
+WorkingDirectory=/opt/whatsapp-zoom-bot
+# Secrets live here, mode 0600, owned by zoombot. Not in the repo.
+EnvironmentFile=/etc/whatsapp-zoom-bot/env
+Environment=NODE_ENV=production
+Environment=DATA_DIR=/var/lib/whatsapp-zoom-bot
+ExecStart=/usr/bin/node /opt/whatsapp-zoom-bot/dist/main.js
+Restart=always
+RestartSec=5
+# Creates /var/lib/whatsapp-zoom-bot (Baileys auth + SQLite), readable only by zoombot.
+StateDirectory=whatsapp-zoom-bot
+StateDirectoryMode=0700
+UMask=0077
+
+# Hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/whatsapp-zoom-bot
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+
+[Install]
+WantedBy=multi-user.target
