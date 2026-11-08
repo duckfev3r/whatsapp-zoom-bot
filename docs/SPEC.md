@@ -25,17 +25,17 @@ A bot in our 20+ person WhatsApp group creates a Zoom meeting on request. It pin
 
 Users type commands. The bot replies only to commands and Zoom events, so it never sends unprompted chatter.
 
-| Command | Who | What happens |
-| --- | --- | --- |
-| `/zoom [title]` | Allowlist | Creates a meeting and posts the link. If one is already live, it re-posts that link instead. |
-| `/zoom norecord [title]` | Allowlist | Same, but with recording off, so there's no transcript. |
-| `/zoom end` | Requester or admins | Ends the live meeting through the API, which unpins the link. |
-| `/zoom status` | Anyone | Says whether a meeting is live, who started it and when. |
-| `/zoom help` | Anyone | Lists the commands. |
+| Command                  | Who                 | What happens                                                                                 |
+| ------------------------ | ------------------- | -------------------------------------------------------------------------------------------- |
+| `/zoom [title]`          | Allowlist           | Creates a meeting and posts the link. If one is already live, it re-posts that link instead. |
+| `/zoom norecord [title]` | Allowlist           | Same, but with recording off, so there's no transcript.                                      |
+| `/zoom end`              | Requester or admins | Ends the live meeting through the API, which unpins the link.                                |
+| `/zoom status`           | Anyone              | Says whether a meeting is live, who started it and when.                                     |
+| `/zoom help`             | Anyone              | Lists the commands.                                                                          |
 
 **Messages the bot posts**
 
-1. **On create:** "📹 *{title}* — {join_url}. Started by {name}. This meeting is recorded, and the transcript will be shared here." The link includes the passcode.
+1. **On create:** "📹 _{title}_ — {join_url}. Started by {name}. This meeting is recorded, and the transcript will be shared here." The link includes the passcode.
 2. **To the requester only:** the host key, with a note that they can use it to claim host if moderation is needed.
 3. **On `meeting.started`:** the bot pins the create message for 24h. It doesn't post anything new.
 4. **On `meeting.ended`:** the bot unpins and posts "Meeting ended ({duration}). Transcript to follow."
@@ -45,7 +45,7 @@ Users type commands. The bot replies only to commands and Zoom events, so it nev
 
 One always-on process holds the WhatsApp socket and the Zoom webhook endpoint. Serverless hosting won't work, because Baileys needs a persistent connection.
 
-*Diagram: architecture · one server, three parts — "One server bridges the group and Zoom; Zoom events drive every pin".*
+_Diagram: architecture · one server, three parts — "One server bridges the group and Zoom; Zoom events drive every pin"._
 
 ```
 +------------------+        +----------------------------------------+        +-------------------+
@@ -85,16 +85,16 @@ The meeting records with no host present only if join-before-host and auto cloud
 
 **Create Meeting payload** (`POST /users/{hostId}/meetings`)
 
-| Setting | Value | Why |
-| --- | --- | --- |
-| `type` | 1 (instant) | It's created on demand. |
-| `settings.join_before_host` | true | No host will join. |
-| `settings.jbh_time` | 0 (anytime) | The link is used straight away. |
-| `settings.waiting_room` | false | Join-before-host doesn't work while the waiting room is on. |
-| `settings.auto_recording` | `cloud` (`none` for norecord) | This is what produces the transcript. |
-| `settings.mute_upon_entry` | true | It keeps order without a host. |
-| `settings.meeting_authentication` | false | Group members may not have Zoom accounts. |
-| `password` | random 6 to 10 characters | The passcode is embedded in `join_url`. It keeps out people who only have the meeting ID. |
+| Setting                           | Value                         | Why                                                                                       |
+| --------------------------------- | ----------------------------- | ----------------------------------------------------------------------------------------- |
+| `type`                            | 1 (instant)                   | It's created on demand.                                                                   |
+| `settings.join_before_host`       | true                          | No host will join.                                                                        |
+| `settings.jbh_time`               | 0 (anytime)                   | The link is used straight away.                                                           |
+| `settings.waiting_room`           | false                         | Join-before-host doesn't work while the waiting room is on.                               |
+| `settings.auto_recording`         | `cloud` (`none` for norecord) | This is what produces the transcript.                                                     |
+| `settings.mute_upon_entry`        | true                          | It keeps order without a host.                                                            |
+| `settings.meeting_authentication` | false                         | Group members may not have Zoom accounts.                                                 |
+| `password`                        | random 6 to 10 characters     | The passcode is embedded in `join_url`. It keeps out people who only have the meeting ID. |
 
 **Host fallback.** Alternative hosts must be licensed users on the same account, which group members aren't. The bot privately messages the requester the account's host key instead. Claiming host gives them mute, remove and stop-recording controls.
 
@@ -126,14 +126,14 @@ CREATE TABLE instances (
 );
 ```
 
-| From | Event | To | Bot action |
-| --- | --- | --- | --- |
-| — | `/zoom` | created | Create the Zoom meeting, post the link, DM the host key |
-| created | `meeting.started` | live | Pin the create message for 24h, insert an instance row |
-| created | 2h with no start | expired | Delete the Zoom meeting and reply "link expired" |
-| live | `meeting.ended` | ended | Unpin and post "Transcript to follow" |
-| ended | `meeting.started` (rejoin) | live | Pin again and add a new instance row |
-| ended | every instance transcribed, or 24h passed | done | Post "no transcript available" for any instance still missing one |
+| From    | Event                                     | To      | Bot action                                                        |
+| ------- | ----------------------------------------- | ------- | ----------------------------------------------------------------- |
+| —       | `/zoom`                                   | created | Create the Zoom meeting, post the link, DM the host key           |
+| created | `meeting.started`                         | live    | Pin the create message for 24h, insert an instance row            |
+| created | 2h with no start                          | expired | Delete the Zoom meeting and reply "link expired"                  |
+| live    | `meeting.ended`                           | ended   | Unpin and post "Transcript to follow"                             |
+| ended   | `meeting.started` (rejoin)                | live    | Pin again and add a new instance row                              |
+| ended   | every instance transcribed, or 24h passed | done    | Post "no transcript available" for any instance still missing one |
 
 Only one meeting per group can be in `created` or `live` at a time. One host user can also only run one meeting at once, so a second group asking for a meeting while one is live is refused.
 
@@ -141,31 +141,31 @@ Only one meeting per group can be in `created` or `live` at a time. One host use
 
 Each failure mode has a fallback, so the group is never left with a stale pin or a missing transcript.
 
-| Case | Handling |
-| --- | --- |
-| `meeting.ended` never arrives | The pin expires after 24h anyway. Every 15 minutes, a sweeper calls `GET /meetings/{id}` and treats a finished meeting as ended. |
-| `recording.transcript_completed` never arrives | Every 30 minutes, a sweeper polls `GET /meetings/{uuid}/recordings` for instances that ended but have no transcript. It gives up after 24h. |
-| Several instances (people left and rejoined) | Post one transcript per instance, labelled "Part 1", "Part 2" and so on. Drop instances shorter than 2 minutes, which are usually link tests. |
-| Instance UUID starts with `/` or contains `//` | Double URL-encode the UUID before calling the recordings API. |
-| Transcript is long | The message carries an LLM summary of at most about 1,500 characters. The full text goes in a `.txt` attachment. |
-| Bot restarts mid-meeting | The Baileys auth state and SQLite both persist. Webhooks that arrive while the bot is offline are queued and replayed in order. |
-| Bot isn't a group admin | Pinning fails, so the bot posts once asking to be made an admin and carries on unpinned. |
-| Duplicate webhooks | Handlers are idempotent, keyed on event type plus UUID. |
-| Someone outside the allowlist sends `/zoom` | The bot replies once: "Ask an admin to add you." |
+| Case                                           | Handling                                                                                                                                      |
+| ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `meeting.ended` never arrives                  | The pin expires after 24h anyway. Every 15 minutes, a sweeper calls `GET /meetings/{id}` and treats a finished meeting as ended.              |
+| `recording.transcript_completed` never arrives | Every 30 minutes, a sweeper polls `GET /meetings/{uuid}/recordings` for instances that ended but have no transcript. It gives up after 24h.   |
+| Several instances (people left and rejoined)   | Post one transcript per instance, labelled "Part 1", "Part 2" and so on. Drop instances shorter than 2 minutes, which are usually link tests. |
+| Instance UUID starts with `/` or contains `//` | Double URL-encode the UUID before calling the recordings API.                                                                                 |
+| Transcript is long                             | The message carries an LLM summary of at most about 1,500 characters. The full text goes in a `.txt` attachment.                              |
+| Bot restarts mid-meeting                       | The Baileys auth state and SQLite both persist. Webhooks that arrive while the bot is offline are queued and replayed in order.               |
+| Bot isn't a group admin                        | Pinning fails, so the bot posts once asking to be made an admin and carries on unpinned.                                                      |
+| Duplicate webhooks                             | Handlers are idempotent, keyed on event type plus UUID.                                                                                       |
+| Someone outside the allowlist sends `/zoom`    | The bot replies once: "Ask an admin to add you."                                                                                              |
 
 ## Security, privacy and risks
 
 The biggest risk is a ban on the bot's number. The biggest obligation is recording consent under GDPR.
 
-| Risk | Mitigation |
-| --- | --- |
-| WhatsApp bans the bot number (ToS breach) | Use a dedicated prepaid SIM. Keep volume low and only send when triggered. If banned, switch to a new number and re-pair. The group itself is unaffected. |
-| Uninvited people get into the meeting | Embed the passcode in the link, so the meeting ID alone isn't enough. The requester gets the host key for moderation. Reset the host key regularly. |
-| Recording without valid consent (GDPR) | The create message states that the meeting is recorded. Zoom's recording disclaimer appears on join. Add a `norecord` option. Pin a group-description note explaining the bot. |
-| Transcripts kept indefinitely | Delete Zoom cloud recordings 7 days after the transcript is posted. Don't store transcript text in SQLite. |
-| Leaked credentials | Keep Zoom secrets and the Baileys auth folder outside the repo, readable only by the service user. |
-| Forged webhooks | Verify `x-zm-signature` with HMAC-SHA256 and the app's secret token, and reject anything older than 5 minutes. |
-| Summary misrepresents the meeting | Label it "AI summary" and always attach the full transcript. |
+| Risk                                      | Mitigation                                                                                                                                                                     |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| WhatsApp bans the bot number (ToS breach) | Use a dedicated prepaid SIM. Keep volume low and only send when triggered. If banned, switch to a new number and re-pair. The group itself is unaffected.                      |
+| Uninvited people get into the meeting     | Embed the passcode in the link, so the meeting ID alone isn't enough. The requester gets the host key for moderation. Reset the host key regularly.                            |
+| Recording without valid consent (GDPR)    | The create message states that the meeting is recorded. Zoom's recording disclaimer appears on join. Add a `norecord` option. Pin a group-description note explaining the bot. |
+| Transcripts kept indefinitely             | Delete Zoom cloud recordings 7 days after the transcript is posted. Don't store transcript text in SQLite.                                                                     |
+| Leaked credentials                        | Keep Zoom secrets and the Baileys auth folder outside the repo, readable only by the service user.                                                                             |
+| Forged webhooks                           | Verify `x-zm-signature` with HMAC-SHA256 and the app's secret token, and reject anything older than 5 minutes.                                                                 |
+| Summary misrepresents the meeting         | Label it "AI summary" and always attach the full transcript.                                                                                                                   |
 
 ## Build plan
 
